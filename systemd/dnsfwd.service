@@ -1,0 +1,14 @@
+[Unit]
+Description=
+
+[Service]
+User=nobody
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/dnsfwd --listen-fds 80.67.188.188 domain
+StandardInput=null
+StandardOutput=null
+StandardError=journal
+RestrictAddressFamilies=AF_INET,AF_INET6
+ProtectHome=yes
+ProtectSystem=full
+PrivateDevices=true
+PrivateTmp=true
