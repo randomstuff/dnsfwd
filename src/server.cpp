@@ -79,7 +79,9 @@ server::server(boost::asio::io_service& io_service, service& service)
   : service_(&service),
     socket_(io_service,
       boost::asio::generic::datagram_protocol::endpoint(
-        boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v6(), 53)
+        boost::asio::ip::udp::endpoint(
+          boost::asio::ip::address_v6::loopback(), 53
+        )
       )
     ),
     context_(nullptr)

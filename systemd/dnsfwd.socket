@@ -2,7 +2,7 @@
 Description=
 
 [Socket]
-ListenDatagram=53
+ListenDatagram=[::1]:53
 
 [Install]
 WantedBy=sockets.target
