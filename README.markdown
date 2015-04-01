@@ -4,6 +4,8 @@ DNS forwarder over a (TCP) virtual circuit.
 
 Roadmap:
 
+* load balancing on multiple servers;
+* truncation of the answer (EDNS0, MTU);
 * logging (syslog, stderr logging);
 * check the QR bit;
 * decent CLI options;
