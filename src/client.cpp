@@ -47,13 +47,32 @@ client::client(boost::asio::io_service& io_service, service& service)
 
 client::~client()
 {
-  // How should I do this efficiently?
-  while (!by_client_id_.empty()) {
-    message& c = *by_client_id_.begin();
-    by_client_id_.erase(c);
+  by_client_id_.clear();
+  while (!queue_.empty()) {
+    auto i = queue_.begin();
+    message& c = *i;
+    queue_.erase(i);
     delete &c;
   }
   LOG(DEBUG) << "Client deleted\n";
+}
+
+void client::clear(std::chrono::steady_clock::time_point time)
+{return;
+  size_t count = 0;
+  while (!queue_.empty()) {
+    auto i = queue_.begin();
+    message& c = *i;
+    if (c.timestamp_ > time)
+      break;
+    queue_.erase(i);
+    by_client_id_.erase(by_client_id_.iterator_to(c));
+    delete &c;
+    count++;
+  }
+  if (count)
+    LOG(DEBUG) << count << " requests dropped, "
+      << by_client_id_.size() << " remaining\n";
 }
 
 bool client::add_request(std::unique_ptr<message>& context)
@@ -111,6 +130,8 @@ void client::send()
 
   if (socket_.is_open()) {
 
+    this->clear(std::chrono::steady_clock::now() + service_->time_to_live());
+
     // Choose a client ID:
     context_->client_id_ = this->random_client_id();
     memcpy(context_->buffer_.data(), &context_->client_id_, sizeof(uint16_t));
@@ -141,7 +162,9 @@ void client::on_send(const boost::system::error_code& error, std::size_t bytes_t
     reset();
   } else {
     LOG(DEBUG) << "Request forwarded\n";
+    context_->timestamp_ = std::chrono::steady_clock::now();
     this->by_client_id_.insert(*context_);
+    this->queue_.push_back(*context_);
     context_.release();
     this->send();
   }
@@ -210,9 +233,11 @@ void client::on_message(const boost::system::error_code& error, std::size_t size
     }
     LOG(DEBUG) << "Reply received\n";
     message& c = *i;
+    assert(c.client_id_ == client_id);
     std::memcpy(buffer_.data(), &c.server_id_, sizeof(c.server_id_));
     service_->send_response(std::move(buffer_), c.endpoint_);
-    by_client_id_.erase(c);
+    by_client_id_.erase(i);
+    queue_.erase(queue_.iterator_to(c));
     delete &c;
     this->start_receive();
   }

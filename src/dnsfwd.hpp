@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include <vector>
 #include <array>
 #include <string>
+#include <chrono>
 
 #include <boost/bind.hpp>
 
@@ -42,8 +43,8 @@ THE SOFTWARE.
 
 #include <boost/system/error_code.hpp>
 
-#include <boost/intrusive/slist.hpp>
-#include <boost/intrusive/slist_hook.hpp>
+#include <boost/intrusive/list.hpp>
+#include <boost/intrusive/list_hook.hpp>
 #include <boost/intrusive/set.hpp>
 #include <boost/intrusive/set_hook.hpp>
 
@@ -86,9 +87,10 @@ public:
   std::uint16_t network_size_;
   std::uint16_t client_id_;
   std::uint16_t server_id_;
+  std::chrono::steady_clock::time_point timestamp_;
   boost::asio::generic::datagram_protocol::endpoint endpoint_;
   boost::intrusive::set_member_hook<> by_client_id_hook_;
-  boost::intrusive::slist_member_hook<> queue_hook_;
+  boost::intrusive::list_member_hook<> queue_hook_;
 
   std::array<boost::asio::const_buffer, 2> vc_buffer()
   {
@@ -166,6 +168,7 @@ private:
   void reset();
   void send();
   void on_send(const boost::system::error_code& error, std::size_t bytes_transferred);
+  void clear(std::chrono::steady_clock::time_point time);
 private:
   typedef boost::intrusive::member_hook<
     message,
@@ -178,10 +181,20 @@ private:
     boost::intrusive::compare<order_message_by_client_id>
   > by_client_id_type;
 
+  typedef boost::intrusive::member_hook<
+    message,
+    boost::intrusive::list_member_hook<>,
+    &message::queue_hook_
+  > QueueOptions;
+  typedef boost::intrusive::list<
+    message, QueueOptions, boost::intrusive::cache_last<true>
+  > queue_type;
+
   boost::asio::io_service* io_service_;
   service* service_;
   boost::asio::ip::tcp::socket socket_;
   by_client_id_type by_client_id_;
+  queue_type queue_;
   std::unique_ptr<message> context_;
 
   std::uint16_t response_size_;
@@ -207,14 +220,18 @@ public:
   const std::string& port() const { return port_; }
   std::unique_ptr<message> unqueue();
   void unregister(std::shared_ptr<client> client);
+  std::chrono::seconds time_to_live() const
+  {
+    return std::chrono::seconds(60);
+  }
 private:
 
   typedef boost::intrusive::member_hook<
     message,
-    boost::intrusive::slist_member_hook<>,
+    boost::intrusive::list_member_hook<>,
     &message::queue_hook_
   > QueueOptions;
-  typedef boost::intrusive::slist<
+  typedef boost::intrusive::list<
     message, QueueOptions, boost::intrusive::cache_last<true>
   > queue_type;
 
