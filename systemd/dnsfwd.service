@@ -12,3 +12,7 @@ ProtectHome=yes
 ProtectSystem=full
 PrivateDevices=true
 PrivateTmp=true
+InaccessibleDirectories=/srv
+ReadOnlyDirectories=/var /opt
+NoNewPrivileges=true
+LimitNPROC=1
