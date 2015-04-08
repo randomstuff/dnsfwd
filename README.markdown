@@ -11,7 +11,6 @@ Roadmap:
 * forget old messages;
 * limit the number of requests in queue;
 * limit the number of submitted requests;
-* multiple server-side sockets;
 * mux the requests over multiple VC;
 * native TLS VC;
 * PF_INET support (?);

@@ -238,7 +238,7 @@ void client::on_message(const boost::system::error_code& error, std::size_t size
     message& c = *i;
     assert(c.client_id_ == client_id);
     std::memcpy(buffer_.data(), &c.server_id_, sizeof(c.server_id_));
-    service_->send_response(std::move(buffer_), c.endpoint_);
+    c.server_->send_response(std::move(buffer_), c.endpoint_);
     by_client_id_.erase(i);
     queue_.erase(queue_.iterator_to(c));
     delete &c;

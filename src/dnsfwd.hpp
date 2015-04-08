@@ -88,14 +88,14 @@ struct config {
   std::vector<std::string> args;
   std::vector<endpoint> bind_udp;
   std::vector<endpoint> connect_tcp;
-  int listen_fds;
+  std::size_t listen_fds;
 };
 
 void setup_config(dnsfwd::config& config, int argc, char** argv);
 
 class message {
 public:
-  message() : buffer_(1024)
+  message() : buffer_(1024), server_(nullptr)
   {
   }
   message(message &) = delete;
@@ -110,6 +110,7 @@ public:
   boost::asio::generic::datagram_protocol::endpoint endpoint_;
   boost::intrusive::set_member_hook<> by_client_id_hook_;
   boost::intrusive::list_member_hook<> queue_hook_;
+  dnsfwd::server* server_;
 
   std::array<boost::asio::const_buffer, 2> vc_buffer()
   {
@@ -225,16 +226,6 @@ class service {
 public:
   service(boost::asio::io_service& io_service, dnsfwd::config config);
   void add_request(std::unique_ptr<message>& context);
-  void send_response(
-    std::vector<char> response,
-    boost::asio::generic::datagram_protocol::endpoint endpoint)
-  {
-    if (config_.connect_tcp.size() == 0) {
-      LOG(ERR) << "no remote endpoint\n";
-      std::exit(1);
-    }
-    server_->send_response(std::move(response), endpoint);
-  }
   std::uint16_t random_id()
   {
     return (std::uint16_t) random_();
@@ -267,7 +258,7 @@ private:
 
   boost::asio::io_service* io_service_;
   dnsfwd::config config_;
-  std::unique_ptr<server> server_;
+  std::vector<std::unique_ptr<server>> servers_;
   std::shared_ptr<client> client_;
   boost::random::mt11213b random_;
   queue_type queue_;

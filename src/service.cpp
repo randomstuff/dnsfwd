@@ -43,20 +43,15 @@ service::service(boost::asio::io_service& io_service, dnsfwd::config config)
     random_(std::time(nullptr))
 {
   // TODO, multiple server objects
-  if (config_.listen_fds > 0) {
-    if (config_.listen_fds != 1)
-      LOG(WARNING) << "more than one socket passed with $LISTEN_FDS, ignored.\n";
-    if (!config_.bind_udp.empty())
-      LOG(WARNING) << "$LISTEN_FDS used and --bind-udp used: the latter is ignored.\n";
-    server_ = std::unique_ptr<server>(new server(io_service, *this, SD_LISTEN_FDS_START));
-  } else {
-    if (config_.bind_udp.empty()) {
-      LOG(ERR) << "No bind address.\n";
-      std::exit(1);
-    }
-    if (config_.bind_udp.size() > 1)
-      LOG(WARNING) << "Mo than one --bind-udp used, ignored.\n";
-    server_ = std::unique_ptr<server>(new server(io_service, *this, config_.bind_udp[0]));
+  for(std::size_t i = 0; i < config_.listen_fds; ++i) {
+    servers_.push_back(std::unique_ptr<server>(
+      new server(io_service, *this, SD_LISTEN_FDS_START + i)
+    ));
+  }
+  for (dnsfwd::endpoint const& endpoint : config_.bind_udp) {
+    servers_.push_back(std::unique_ptr<server>(
+      new server(io_service, *this, endpoint)
+    ));
   }
 }
 

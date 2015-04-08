@@ -114,6 +114,7 @@ void server::on_message(const boost::system::error_code& error, std::size_t size
   } else {
     LOG(DEBUG) << "Request received\n";
     context_->size_ = size + sizeof(uint16_t);
+    context_->server_ = this;
     service_->add_request(context_);
   }
   start_receive();
