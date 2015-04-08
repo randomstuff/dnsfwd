@@ -75,13 +75,12 @@ server::server(boost::asio::io_service& io_service, service& service, int socket
   start_receive();
 }
 
-server::server(boost::asio::io_service& io_service, service& service)
+server::server(boost::asio::io_service& io_service, service& service,
+    dnsfwd::endpoint const& udp_endpoint)
   : service_(&service),
     socket_(io_service,
       boost::asio::generic::datagram_protocol::endpoint(
-        boost::asio::ip::udp::endpoint(
-          boost::asio::ip::address_v6::loopback(), 53
-        )
+        udp_endpoint.udp_endpoint(io_service, "domain")
       )
     ),
     context_(nullptr)

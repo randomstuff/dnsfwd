@@ -10,8 +10,9 @@ add_executable(dnsfwd
   src/client.cpp
   src/server.cpp
   src/service.cpp
+  src/config.cpp
   )
-target_link_libraries(dnsfwd boost_system pthread)
+target_link_libraries(dnsfwd boost_system boost_program_options pthread)
 
 if(USE_SYSTEMD)
   add_definitions(-DUSE_SYSTEMD)

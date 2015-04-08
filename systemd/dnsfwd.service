@@ -3,7 +3,7 @@ Description=
 
 [Service]
 User=nobody
-ExecStart=@CMAKE_INSTALL_PREFIX@/bin/dnsfwd --listen-fds 80.67.188.188 domain
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/dnsfwd --connect-tcp [::1]:53
 StandardInput=null
 StandardOutput=null
 StandardError=journal

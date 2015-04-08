@@ -100,9 +100,12 @@ void client::connect()
 {
   // TODO, make this async
   LOG(DEBUG) << "Connecting\n";
+
+  dnsfwd::endpoint const& endpoint = service_->tcp_connect_endpoints().at(0);
+
   boost::asio::ip::tcp::resolver resolver(*io_service_);
   boost::asio::ip::tcp::resolver::query query(
-    service_->host(), service_->port());
+    endpoint.name, endpoint.port.empty() ? "domain" : endpoint.port);
   boost::asio::ip::tcp::resolver::iterator endpoint_iterator =
     resolver.resolve(query);
   boost::asio::ip::tcp::resolver::iterator end;

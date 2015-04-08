@@ -23,26 +23,41 @@ THE SOFTWARE.
 
 #include "dnsfwd.hpp"
 
+#include <memory>
+
 #include <ctime>
 
 #include <boost/asio/io_service.hpp>
 
+#ifdef USE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#else
+#define SD_LISTEN_FDS_START 3
+#endif
+
 namespace dnsfwd {
 
-service::service(boost::asio::io_service& io_service, char* host, char* port, int socket)
+service::service(boost::asio::io_service& io_service, dnsfwd::config config)
   : io_service_(&io_service),
-    host_(host), port_(port),
-    server_(io_service, *this, socket),
+    config_(std::move(config)),
     random_(std::time(nullptr))
 {
-}
-
-service::service(boost::asio::io_service& io_service, char* host, char* port)
-  : io_service_(&io_service),
-    host_(host), port_(port),
-    server_(io_service, *this),
-    random_(std::time(nullptr))
-{
+  // TODO, multiple server objects
+  if (config_.listen_fds > 0) {
+    if (config_.listen_fds != 1)
+      LOG(WARNING) << "more than one socket passed with $LISTEN_FDS, ignored.\n";
+    if (!config_.bind_udp.empty())
+      LOG(WARNING) << "$LISTEN_FDS used and --bind-udp used: the latter is ignored.\n";
+    server_ = std::unique_ptr<server>(new server(io_service, *this, SD_LISTEN_FDS_START));
+  } else {
+    if (config_.bind_udp.empty()) {
+      LOG(ERR) << "No bind address.\n";
+      std::exit(1);
+    }
+    if (config_.bind_udp.size() > 1)
+      LOG(WARNING) << "Mo than one --bind-udp used, ignored.\n";
+    server_ = std::unique_ptr<server>(new server(io_service, *this, config_.bind_udp[0]));
+  }
 }
 
 void service::add_request(std::unique_ptr<message>& context)

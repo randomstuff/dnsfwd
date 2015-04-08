@@ -59,10 +59,11 @@ THE SOFTWARE.
 #define ALERT 0
 
 #define LOG(k) if(::dnsfwd::loglevel >= LOG_ ## k)\
-  std::cerr << "<" << (LOG_ ## k) << ">"
+  std::cerr << ::dnsfwd::logformat[(LOG_ ## k)]
 
 namespace dnsfwd {
 
+struct endpoint;
 class message;
 class server;
 class client;
@@ -73,6 +74,24 @@ struct order_message_by_client_id;
 
 const size_t MIN_MESSAGE_SIZE = 12;
 extern int loglevel;
+extern const char** logformat;
+
+struct endpoint {
+  std::string name;
+  std::string port;
+
+  boost::asio::ip::udp::endpoint udp_endpoint(
+    boost::asio::io_service& service, const char* default_port) const;
+};
+
+struct config {
+  std::vector<std::string> args;
+  std::vector<endpoint> bind_udp;
+  std::vector<endpoint> connect_tcp;
+  int listen_fds;
+};
+
+void setup_config(dnsfwd::config& config, int argc, char** argv);
 
 class message {
 public:
@@ -136,7 +155,8 @@ struct order_message_by_client_id {
 
 class server {
 public:
-  server(boost::asio::io_service& io_service, service& service);
+  server(boost::asio::io_service& io_service, service& service,
+    dnsfwd::endpoint const& udp_endpoint);
   server(boost::asio::io_service& io_service, service& service, int socket);
 public:
   void send_response(
@@ -203,21 +223,31 @@ private:
 
 class service {
 public:
-  service(boost::asio::io_service& io_service, char* host, char* port);
-  service(boost::asio::io_service& io_service, char* host, char* port, int socket);
+  service(boost::asio::io_service& io_service, dnsfwd::config config);
   void add_request(std::unique_ptr<message>& context);
   void send_response(
     std::vector<char> response,
     boost::asio::generic::datagram_protocol::endpoint endpoint)
   {
-    server_.send_response(std::move(response), endpoint);
+    if (config_.connect_tcp.size() == 0) {
+      LOG(ERR) << "no remote endpoint\n";
+      std::exit(1);
+    }
+    server_->send_response(std::move(response), endpoint);
   }
   std::uint16_t random_id()
   {
     return (std::uint16_t) random_();
   }
-  const std::string& host() const { return host_; }
-  const std::string& port() const { return port_; }
+  // TODO, remote this
+  std::vector<endpoint> const& tcp_connect_endpoints()
+  {
+    return config_.connect_tcp;
+  }
+  std::vector<endpoint> const& udp_listen_endpoints()
+  {
+    return config_.bind_udp;
+  }
   std::unique_ptr<message> unqueue();
   void unregister(std::shared_ptr<client> client);
   std::chrono::seconds time_to_live() const
@@ -236,9 +266,8 @@ private:
   > queue_type;
 
   boost::asio::io_service* io_service_;
-  std::string host_;
-  std::string port_;
-  server server_;
+  dnsfwd::config config_;
+  std::unique_ptr<server> server_;
   std::shared_ptr<client> client_;
   boost::random::mt11213b random_;
   queue_type queue_;

@@ -8,7 +8,6 @@ Roadmap:
 * truncation of the answer (EDNS0, MTU);
 * logging (syslog, stderr logging);
 * check the QR bit;
-* decent CLI options;
 * forget old messages;
 * limit the number of requests in queue;
 * limit the number of submitted requests;
