@@ -57,7 +57,7 @@ service::service(boost::asio::io_service& io_service, dnsfwd::config config)
 
 void service::add_request(std::unique_ptr<message>& context)
 {
-  std::memcpy(&context->server_id_, context->buffer_.data(), sizeof(uint16_t));
+  context->server_id_ = context->id();
 
   if (!client_) {
     client_ = std::make_shared<client>(*io_service_, *this);

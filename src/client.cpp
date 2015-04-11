@@ -137,7 +137,7 @@ void client::send()
 
     // Choose a client ID:
     context_->client_id_ = this->random_client_id();
-    memcpy(context_->buffer_.data(), &context_->client_id_, sizeof(uint16_t));
+    context_->id(context_->client_id_);
 
     LOG(DEBUG) << "Forwarding request\n";
     boost::asio::async_write(

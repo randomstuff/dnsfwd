@@ -110,6 +110,17 @@ public:
   boost::asio::generic::datagram_protocol::endpoint endpoint_;
   dnsfwd::server* server_;
 
+public:
+  std::uint16_t id() const
+  {
+    std::uint16_t res;
+    std::memcpy(&res, buffer_.data(), sizeof(res));
+    return res;
+  }
+  void id(std::uint16_t id)
+  {
+    std::memcpy(buffer_.data(), &id, sizeof(id));
+  }
   std::array<boost::asio::const_buffer, 2> vc_buffer()
   {
     network_size_ = htons(size_);
