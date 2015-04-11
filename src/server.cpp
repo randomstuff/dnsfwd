@@ -113,7 +113,7 @@ void server::on_message(const boost::system::error_code& error, std::size_t size
     LOG(DEBUG) << "Request is too small (" << size << " bytes)\n";
   } else {
     LOG(DEBUG) << "Request received\n";
-    context_->size_ = size + sizeof(uint16_t);
+    context_->size_ = size;
     context_->server_ = this;
     service_->add_request(context_);
   }
