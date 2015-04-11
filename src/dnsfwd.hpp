@@ -108,8 +108,6 @@ public:
   std::uint16_t server_id_;
   std::chrono::steady_clock::time_point timestamp_;
   boost::asio::generic::datagram_protocol::endpoint endpoint_;
-  boost::intrusive::set_member_hook<> by_client_id_hook_;
-  boost::intrusive::list_member_hook<> queue_hook_;
   dnsfwd::server* server_;
 
   std::array<boost::asio::const_buffer, 2> vc_buffer()
@@ -123,6 +121,20 @@ public:
   bool operator==(message const& that) const {
     return this==&that;
   }
+private:
+  boost::intrusive::set_member_hook<> by_client_id_hook_;
+  boost::intrusive::list_member_hook<> queue_hook_;
+public:
+  typedef boost::intrusive::member_hook<
+    message,
+    boost::intrusive::set_member_hook<>,
+    &message::by_client_id_hook_
+  > ByClientIdOptions;
+  typedef boost::intrusive::member_hook<
+    message,
+    boost::intrusive::list_member_hook<>,
+    &message::queue_hook_
+  > QueueOptions;
 };
 
 struct order_message_by_server_id {
@@ -191,24 +203,14 @@ private:
   void on_send(const boost::system::error_code& error, std::size_t bytes_transferred);
   void clear(std::chrono::steady_clock::time_point time);
 private:
-  typedef boost::intrusive::member_hook<
-    message,
-    boost::intrusive::set_member_hook<>,
-    &message::by_client_id_hook_
-  > ByClientIdOptions;
   typedef boost::intrusive::set<
     message,
-    ByClientIdOptions,
+    message::ByClientIdOptions,
     boost::intrusive::compare<order_message_by_client_id>
   > by_client_id_type;
 
-  typedef boost::intrusive::member_hook<
-    message,
-    boost::intrusive::list_member_hook<>,
-    &message::queue_hook_
-  > QueueOptions;
   typedef boost::intrusive::list<
-    message, QueueOptions, boost::intrusive::cache_last<true>
+    message, message::QueueOptions, boost::intrusive::cache_last<true>
   > queue_type;
 
   boost::asio::io_service* io_service_;
@@ -247,13 +249,8 @@ public:
   }
 private:
 
-  typedef boost::intrusive::member_hook<
-    message,
-    boost::intrusive::list_member_hook<>,
-    &message::queue_hook_
-  > QueueOptions;
   typedef boost::intrusive::list<
-    message, QueueOptions, boost::intrusive::cache_last<true>
+    message, message::QueueOptions, boost::intrusive::cache_last<true>
   > queue_type;
 
   boost::asio::io_service* io_service_;
