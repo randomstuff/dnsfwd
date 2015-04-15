@@ -58,7 +58,7 @@ client::~client()
 }
 
 void client::clear(std::chrono::steady_clock::time_point time)
-{return;
+{
   size_t count = 0;
   while (!queue_.empty()) {
     auto i = queue_.begin();
@@ -133,7 +133,7 @@ void client::send()
 
   if (socket_.is_open()) {
 
-    this->clear(std::chrono::steady_clock::now() + service_->time_to_live());
+    this->clear(std::chrono::steady_clock::now() - service_->time_to_live());
 
     // Choose a client ID:
     context_->client_id_ = this->random_client_id();
@@ -228,7 +228,7 @@ void client::on_message(const boost::system::error_code& error, std::size_t size
     std::memcpy(&client_id, buffer_.data(), sizeof(client_id));
     by_client_id_type::iterator i = by_client_id_.find(client_id,
       order_message_by_client_id());
-    by_client_id_type::iterator end;
+    by_client_id_type::iterator end = by_client_id_.end();
     if (i == end) {
       LOG(ERR) << "Reply received not expected\n";
       this->start_receive();
