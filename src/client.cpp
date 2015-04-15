@@ -48,12 +48,7 @@ client::client(boost::asio::io_service& io_service, service& service)
 client::~client()
 {
   by_client_id_.clear();
-  while (!queue_.empty()) {
-    auto i = queue_.begin();
-    message& c = *i;
-    queue_.erase(i);
-    delete &c;
-  }
+  queue_.clear_and_dispose(deleter());
   LOG(DEBUG) << "Client deleted\n";
 }
 
@@ -66,8 +61,7 @@ void client::clear(std::chrono::steady_clock::time_point time)
     if (c.timestamp_ > time)
       break;
     queue_.erase(i);
-    by_client_id_.erase(by_client_id_.iterator_to(c));
-    delete &c;
+    by_client_id_.erase_and_dispose(by_client_id_.iterator_to(c), deleter());
     count++;
   }
   if (count)
@@ -240,8 +234,7 @@ void client::on_message(const boost::system::error_code& error, std::size_t size
     std::memcpy(buffer_.data(), &c.server_id_, sizeof(c.server_id_));
     c.server_->send_response(std::move(buffer_), c.endpoint_);
     by_client_id_.erase(i);
-    queue_.erase(queue_.iterator_to(c));
-    delete &c;
+    queue_.erase_and_dispose(queue_.iterator_to(c), deleter());
     this->start_receive();
   }
 }

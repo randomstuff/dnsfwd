@@ -76,6 +76,14 @@ const size_t MIN_MESSAGE_SIZE = 12;
 extern int loglevel;
 extern const char** logformat;
 
+struct deleter {
+  template<class T>
+  void operator()(T* p) const
+  {
+    delete p;
+  }
+};
+
 struct endpoint {
   std::string name;
   std::string port;
