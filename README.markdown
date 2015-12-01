@@ -89,6 +89,7 @@ resolver and stunnel+dnsfwd:
 
 ## TODO
 
+* connect to UNIX socket;
 * load balancing on multiple servers;
 * truncation of the answer (EDNS0, MTU);
 * logging (syslog, stderr logging);
