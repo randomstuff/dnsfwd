@@ -40,6 +40,7 @@ namespace dnsfwd {
 
 namespace {
 
+#ifdef USE_SYSTEMD
 boost::asio::generic::datagram_protocol datagram_protocol_from_socket(int fd)
 {
   int domain, type, protocol;
@@ -64,9 +65,11 @@ boost::asio::generic::datagram_protocol datagram_protocol_from_socket(int fd)
 
   return boost::asio::generic::datagram_protocol(domain, protocol);
 }
+#endif
 
 }
 
+#ifdef USE_SYSTEMD
 server::server(boost::asio::io_service& io_service, service& service, int socket)
   : service_(&service),
     socket_(io_service, datagram_protocol_from_socket(socket), socket),
@@ -74,6 +77,7 @@ server::server(boost::asio::io_service& io_service, service& service, int socket
 {
   start_receive();
 }
+#endif
 
 server::server(boost::asio::io_service& io_service, service& service,
     dnsfwd::endpoint const& udp_endpoint)

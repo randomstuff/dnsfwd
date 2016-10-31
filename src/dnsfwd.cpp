@@ -33,7 +33,6 @@ int main(int argc, char** argv)
 {
   try {
     dnsfwd::config config;
-    config.listen_fds = 0;
     setup_config(config, argc, argv);
 
     boost::asio::io_service io_service;
