@@ -135,10 +135,10 @@ public:
   std::array<boost::asio::const_buffer, 2> vc_buffer()
   {
     network_size_ = htons(size_);
-    return {
+    return {{
       boost::asio::buffer( &network_size_, sizeof(network_size_) ),
       boost::asio::buffer( buffer_.data(), size_ )
-    };
+    }};
   }
   bool operator==(message const& that) const {
     return this==&that;
