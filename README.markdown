@@ -11,9 +11,19 @@ This can be used to use DNS/TLS. Unbound can delegate requests to a remote
 DNS/TLS server but each request uses a new TCP connection which is not very
 efficient.
 
+**Warning:** This is a prototype. You might not want to use it in production.
+Use at your own risk. You might want to use it in some restricted environment.
+The systemd unit file includes many restrictions and does not run as root. The
+program by itself currently cannot drop privileges: it must either run as root
+or bind to a non privileged port.
+
 ## DNS/TLS setup
 
 ### Basic setup
+
+~~~sh
+dnsfwd --bind-udp 127.0.0.1:53 --connect-tcp 127.0.0.1:53
+~~~
 
 ~~~
                                                  .------------------.
