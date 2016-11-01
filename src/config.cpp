@@ -137,10 +137,10 @@ void setup_config(dnsfwd::config& config, int argc, char** argv)
   options_description desc("Allowed options");
   desc.add_options()
     ("help", "help")
-    ("bind-udp", value<std::vector<std::string>>(), "bind to the given UDP address")
-    ("connect-tcp", value<std::vector<std::string>>(), "connect to the given TCP endpoint")
-    ("loglevel", value<int>(), "loglevel")
-    ("logformat", value<std::string>(), "logformat")
+    ("bind-udp", value<std::vector<std::string>>(), "bind to the given UDP address (eg. 127.0.0.1:43)")
+    ("connect-tcp", value<std::vector<std::string>>(), "connect to the given TCP endpoint (eg. 127.0.0.1:43)")
+    ("loglevel", value<int>(), "loglevel (0--8)")
+    ("logformat", value<std::string>(), "logformat (kernel, daemon, human)")
     ;
 
   variables_map vm;
@@ -148,6 +148,7 @@ void setup_config(dnsfwd::config& config, int argc, char** argv)
   notify(vm);
 
   if (vm.count("help")) {
+    std::cout << "dnsfwd: DNS forwarder over a (TCP) virtual circuit\n";
     std::cout << desc << "\n";
     std::exit(0);
   }
