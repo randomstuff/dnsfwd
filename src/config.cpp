@@ -101,7 +101,7 @@ endpoint parse_endpoint(std::string const& e)
     res.name = match[1];
     if (match.size() > 1)
       res.port = match[2];
-    return std::move(res);
+    return res;
   } else {
     LOG(ERR) << "Invalid endpoint specification\n";
     std::exit(1);
