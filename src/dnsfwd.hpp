@@ -55,10 +55,6 @@ THE SOFTWARE.
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/generic/datagram_protocol.hpp>
 
-#define EMERG 0
-#define ALERT 0
-#define ALERT 0
-
 #define LOG(k) if(::dnsfwd::loglevel >= LOG_ ## k)\
   std::cerr << ::dnsfwd::logformat[(LOG_ ## k)]
 
