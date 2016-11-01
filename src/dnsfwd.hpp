@@ -94,7 +94,7 @@ struct config {
   std::vector<endpoint> bind_udp;
   std::vector<endpoint> connect_tcp;
 #ifdef USE_SYSTEMD
-  std::size_t listen_fds = 0;
+  int listen_fds = 0;
 #endif
 };
 
