@@ -105,18 +105,20 @@ void client::connect()
   boost::asio::ip::tcp::resolver::iterator endpoint_iterator =
     resolver.resolve(query);
   boost::asio::ip::tcp::resolver::iterator end;
+
   if (boost::asio::connect(socket_, endpoint_iterator) == end) {
     LOG(ERR) << "Could not connect\n";
     this->reset();
-  } else {
-    LOG(DEBUG) << "Connected\n";
-
-    boost::asio::ip::tcp::no_delay no_delay(true);
-    socket_.set_option(no_delay);
-
-    this->start_receive();
-    this->send();
+    return;
   }
+
+  LOG(DEBUG) << "Connected\n";
+
+  boost::asio::ip::tcp::no_delay no_delay(true);
+  socket_.set_option(no_delay);
+
+  this->start_receive();
+  this->send();
 }
 
 void client::send()
@@ -127,46 +129,51 @@ void client::send()
       return;
   }
 
-  if (socket_.is_open()) {
-
-    this->clear(std::chrono::steady_clock::now() - service_->time_to_live());
-
-    // Choose a client ID:
-    context_->client_id_ = this->random_client_id();
-    context_->id(context_->client_id_);
-
-    LOG(DEBUG) << "Forwarding request\n";
-    boost::asio::async_write(
-      socket_,
-      context_->vc_buffer(),
-      boost::bind(
-        &client::on_send,
-        this->shared_from_this(),
-        boost::asio::placeholders::error,
-        boost::asio::placeholders::bytes_transferred
-      )
-    );
-  } else {
-    reset();
+  if (!socket_.is_open()) {
+    this->reset();
+    return;
   }
+
+  this->clear(std::chrono::steady_clock::now() - service_->time_to_live());
+
+  // Choose a client ID:
+  context_->client_id_ = this->random_client_id();
+  context_->id(context_->client_id_);
+
+  LOG(DEBUG) << "Forwarding request\n";
+  boost::asio::async_write(
+    socket_,
+    context_->vc_buffer(),
+    boost::bind(
+      &client::on_send,
+      this->shared_from_this(),
+      boost::asio::placeholders::error,
+      boost::asio::placeholders::bytes_transferred
+    )
+  );
 }
 
 void client::on_send(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
   if (error) {
     LOG(ERR) << "Forward request: error " << error << '\n';
-    reset();
-  } else if (bytes_transferred != context_->size_ + sizeof(uint16_t)) {
-    LOG(ERR) << "Forward request: transfer incomplete\n";
-    reset();
-  } else {
-    LOG(DEBUG) << "Request forwarded\n";
-    context_->timestamp_ = std::chrono::steady_clock::now();
-    this->by_client_id_.insert(*context_);
-    this->queue_.push_back(*context_);
-    context_.release();
-    this->send();
+    this->reset();
+    return;
   }
+
+  if (bytes_transferred != context_->size_ + sizeof(uint16_t)) {
+    LOG(ERR) << "Forward request: transfer incomplete\n";
+    this->reset();
+    return;
+  }
+
+  LOG(DEBUG) << "Request forwarded\n";
+  context_->timestamp_ = std::chrono::steady_clock::now();
+  this->by_client_id_.insert(*context_);
+  this->queue_.push_back(*context_);
+  context_.release();
+
+  this->send();
 }
 
 void client::start_receive()
@@ -187,58 +194,74 @@ void client::on_message_size(const boost::system::error_code& error, std::size_t
 {
   if (error) {
     LOG(DEBUG) << "Reply reception error: " << error << '\n';
-    reset();
-  } else if (size != sizeof(uint16_t)) {
-    LOG(ERR) << "Reply reception incomplete\n";
-    reset();
-  } else {
-    LOG(DEBUG) << "Reply size received\n";
-    this->response_size_ = ntohs(this->response_size_);
-    buffer_.resize(this->response_size_);
-    boost::asio::async_read(
-      socket_,
-      boost::asio::buffer(buffer_.data(), this->response_size_),
-      boost::bind(
-        &client::on_message,
-        this->shared_from_this(),
-        boost::asio::placeholders::error,
-        boost::asio::placeholders::bytes_transferred
-      )
-    );
+    this->reset();
+    return;
   }
+
+  if (size != sizeof(uint16_t)) {
+    LOG(ERR) << "Reply reception incomplete\n";
+    this->reset();
+    return;
+  }
+
+  LOG(DEBUG) << "Reply size received\n";
+  this->response_size_ = ntohs(this->response_size_);
+  buffer_.resize(this->response_size_);
+  boost::asio::async_read(
+    socket_,
+    boost::asio::buffer(buffer_.data(), this->response_size_),
+    boost::bind(
+      &client::on_message,
+      this->shared_from_this(),
+      boost::asio::placeholders::error,
+      boost::asio::placeholders::bytes_transferred
+    )
+  );
 }
 
 void client::on_message(const boost::system::error_code& error, std::size_t size)
 {
   if (error) {
     LOG(ERR) << "Reply reception error: " << error << '\n';
-    reset();
-  } else if (size != this->response_size_) {
+    this->reset();
+    return;
+  }
+
+  if (size != this->response_size_) {
     LOG(ERR) << "Reply reception incomplete\n";
-    reset();
-  } else if (size < MIN_MESSAGE_SIZE) {
+    this->reset();
+    return;
+  }
+
+  if (size < MIN_MESSAGE_SIZE) {
     LOG(ERR) << "Reply received but too small\n";
     this->start_receive();
-  } else {
-    std::uint16_t client_id;
-    std::memcpy(&client_id, buffer_.data(), sizeof(client_id));
-    by_client_id_type::iterator i = by_client_id_.find(client_id,
-      order_message_by_client_id());
-    by_client_id_type::iterator end = by_client_id_.end();
-    if (i == end) {
-      LOG(ERR) << "Reply received not expected\n";
-      this->start_receive();
-      return;
-    }
-    LOG(DEBUG) << "Reply received\n";
-    message& c = *i;
-    assert(c.client_id_ == client_id);
-    std::memcpy(buffer_.data(), &c.server_id_, sizeof(c.server_id_));
-    c.server_->send_response(std::move(buffer_), c.endpoint_);
-    by_client_id_.erase(i);
-    queue_.erase_and_dispose(queue_.iterator_to(c), deleter());
-    this->start_receive();
+    return;
   }
+
+  // Find the original request based on message ID:
+  std::uint16_t client_id;
+  std::memcpy(&client_id, buffer_.data(), sizeof(client_id));
+  by_client_id_type::iterator i = by_client_id_.find(client_id,
+    order_message_by_client_id());
+  by_client_id_type::iterator end = by_client_id_.end();
+  if (i == end) {
+    LOG(ERR) << "Reply received not expected\n";
+    this->start_receive();
+    return;
+  }
+  LOG(DEBUG) << "Reply received\n";
+  message& c = *i;
+  assert(c.client_id_ == client_id);
+
+  std::memcpy(buffer_.data(), &c.server_id_, sizeof(c.server_id_));
+  c.server_->send_response(std::move(buffer_), c.endpoint_);
+
+  // Forget about it:
+  by_client_id_.erase(i);
+  queue_.erase_and_dispose(queue_.iterator_to(c), deleter());
+
+  this->start_receive();
 }
 
 void client::reset()
