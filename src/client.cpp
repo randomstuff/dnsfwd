@@ -35,6 +35,8 @@ THE SOFTWARE.
 #include <boost/asio/write.hpp>
 #include <boost/asio/connect.hpp>
 
+#include <boost/system/error_code.hpp>
+
 #include <memory>
 
 namespace dnsfwd {
@@ -242,7 +244,9 @@ void client::on_message(const boost::system::error_code& error, std::size_t size
 void client::reset()
 {
   if (socket_.is_open()) {
-    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+    boost::system::error_code ec;
+    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    // Ignore errors from shutdown().
     socket_.close();
   }
   service_->unregister(this->shared_from_this());
