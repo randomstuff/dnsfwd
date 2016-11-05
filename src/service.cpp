@@ -42,14 +42,13 @@ service::service(boost::asio::io_service& io_service, dnsfwd::config config)
     config_(std::move(config)),
     random_(std::time(nullptr))
 {
-#ifdef USE_SYSTEMD
   // TODO, multiple server objects
   for(std::size_t i = 0; i < config_.listen_fds; ++i) {
     servers_.push_back(std::unique_ptr<server>(
       new server(io_service, *this, SD_LISTEN_FDS_START + i)
     ));
   }
-#endif
+
   for (dnsfwd::endpoint const& endpoint : config_.bind_udp) {
     servers_.push_back(std::unique_ptr<server>(
       new server(io_service, *this, endpoint)

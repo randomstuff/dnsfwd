@@ -93,9 +93,7 @@ struct config {
   std::vector<std::string> args;
   std::vector<endpoint> bind_udp;
   std::vector<endpoint> connect_tcp;
-#ifdef USE_SYSTEMD
   int listen_fds = 0;
-#endif
 };
 
 void setup_config(dnsfwd::config& config, int argc, char** argv);
@@ -188,9 +186,7 @@ class server {
 public:
   server(boost::asio::io_service& io_service, service& service,
     dnsfwd::endpoint const& udp_endpoint);
-#ifdef USE_SYSTEMD
   server(boost::asio::io_service& io_service, service& service, int socket);
-#endif
 public:
   void send_response(
     std::vector<char> response,

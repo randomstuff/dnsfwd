@@ -23,6 +23,9 @@ THE SOFTWARE.
 
 #include <cstdlib>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include <regex>
 
 #ifdef USE_SYSTEMD
@@ -37,6 +40,32 @@ THE SOFTWARE.
 #include <boost/program_options.hpp>
 
 #include "dnsfwd.hpp"
+
+#ifndef USE_SYSTEMD
+static int sd_listen_fds(int unset_environment)
+{
+  const char* listen_pid_env = std::getenv("LISTEN_PID");
+  if (listen_pid_env == nullptr)
+    return 0;
+  pid_t listen_pid = atoll(listen_pid_env);
+  if (listen_pid != getpid())
+    return 0;
+
+  const char* listen_fds_env = std::getenv("LISTEN_FDS");
+  if (listen_fds_env == nullptr)
+    return 0;
+  int listen_fds = atoi(listen_fds_env);
+
+  if (unset_environment) {
+    unsetenv("LISTEN_PID");
+    unsetenv("LISTEN_FDS");
+    unsetenv("LISTEN_FDNAMES");
+  }
+
+  LOG(DEBUG) << "Found " << listen_fds << " file descriptor(s)\n";
+  return listen_fds;
+}
+#endif
 
 namespace {
 
@@ -183,13 +212,11 @@ void setup_config(dnsfwd::config& config, int argc, char** argv)
     for (std::string const& e : vm["connect-tcp"].as<std::vector<std::string>>())
       config.connect_tcp.push_back(parse_endpoint(e));
 
-  #ifdef USE_SYSTEMD
     if (!config.listen_fds) {
       config.listen_fds = sd_listen_fds(1);
       if (config.listen_fds < 0)
         config.listen_fds = 0;
     }
-  #endif
 }
 
 }

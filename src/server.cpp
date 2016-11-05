@@ -40,16 +40,28 @@ namespace dnsfwd {
 
 namespace {
 
-#ifdef USE_SYSTEMD
 boost::asio::generic::datagram_protocol datagram_protocol_from_socket(int fd)
 {
   int domain, type, protocol;
   socklen_t len = sizeof(domain);
 
+#if HAVE_SO_DOMAIN
   if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &domain, &len) != 0) {
     LOG(CRIT) << "Could not get socket domain.\n";
     std::exit(1);
   }
+#else
+  struct sockaddr_storage addr;
+  socklen_t addrlen = sizeof(addr);
+  if (getsockname(fd, (struct sockaddr*) &addr, &addrlen) != 0) {
+    LOG(CRIT) << "Could not get socket name.\n";
+    std::exit(1);
+  }
+  // PF_ and AF_ are the same on BSD, Linux, POSIX:
+  domain = addr.ss_family;
+#endif
+
+#if HAVE_SO_TYPE
   if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &len) != 0) {
     LOG(CRIT) << "Could not get socket type.\n";
     std::exit(1);
@@ -58,6 +70,8 @@ boost::asio::generic::datagram_protocol datagram_protocol_from_socket(int fd)
     LOG(CRIT) << "Not a datagram protocol\n";
     std::exit(1);
   }
+#endif
+
   if (getsockopt(fd, SOL_SOCKET, SO_PROTOCOL, &protocol, &len) != 0) {
     LOG(CRIT) << "Could not get socket protocol.\n";
     std::exit(1);
@@ -65,11 +79,9 @@ boost::asio::generic::datagram_protocol datagram_protocol_from_socket(int fd)
 
   return boost::asio::generic::datagram_protocol(domain, protocol);
 }
-#endif
 
 }
 
-#ifdef USE_SYSTEMD
 server::server(boost::asio::io_service& io_service, service& service, int socket)
   : service_(&service),
     socket_(io_service, datagram_protocol_from_socket(socket), socket),
@@ -77,7 +89,6 @@ server::server(boost::asio::io_service& io_service, service& service, int socket
 {
   start_receive();
 }
-#endif
 
 server::server(boost::asio::io_service& io_service, service& service,
     dnsfwd::endpoint const& udp_endpoint)
