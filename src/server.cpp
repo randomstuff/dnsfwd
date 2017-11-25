@@ -42,7 +42,7 @@ namespace {
 
 boost::asio::generic::datagram_protocol datagram_protocol_from_socket(int fd)
 {
-  int domain, type, protocol;
+  int domain, protocol;
   socklen_t len = sizeof(domain);
 
 #if HAVE_SO_DOMAIN
@@ -62,6 +62,7 @@ boost::asio::generic::datagram_protocol datagram_protocol_from_socket(int fd)
 #endif
 
 #if HAVE_SO_TYPE
+  int type;
   if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &len) != 0) {
     LOG(CRIT) << "Could not get socket type.\n";
     std::exit(1);
