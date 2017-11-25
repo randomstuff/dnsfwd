@@ -248,7 +248,7 @@ public:
   {
     return (std::uint16_t) random_();
   }
-  // TODO, remote this
+  // TODO, remove this
   std::vector<endpoint> const& tcp_connect_endpoints()
   {
     return config_.connect_tcp;

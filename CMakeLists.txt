@@ -13,7 +13,7 @@ if(HAVE_SO_TYPE)
   add_definitions(-DHAVE_SO_TYPE)
 endif()
 
-option(USE_SYSTEMD "Link againt libsystemd" OFF)
+option(USE_SYSTEMD "Link against libsystemd" OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
