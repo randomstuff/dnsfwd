@@ -1,5 +1,9 @@
 # dnsfwd
 
+*LEGACY:*
+See [DNS Privacy](https://dnsprivacy.org/)
+for [up-to-date solutions](https://dnsprivacy.org/wiki/display/DP/DNS+Privacy+Clients).
+
 DNS forwarder over a (TCP) virtual circuit:
 
 * open UDP sockets and wait for incoming queries;
